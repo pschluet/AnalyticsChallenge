@@ -3,7 +3,9 @@ import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, LabelBinarizer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, make_scorer
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.base import BaseEstimator, TransformerMixin
 
 def load_data():
     # Load training data
@@ -18,19 +20,19 @@ def load_data():
 
     return (np.array(x_train), y_train, np.array(x_test[x_train.keys()]), x_train.keys())
 
-def gen_one_hot_feature_mask(features):
-    return np.logical_or.reduce(
+def gen_one_hot_feature_ndx(features):
+    return np.where(np.logical_or.reduce(
         ('Department' == features,
         'EducationField' == features,
         'JobRole' == features,
-        'MaritalStatus' == features))
+        'MaritalStatus' == features)))
 
-class ColEncoder(object):
+class ColEncoder(BaseEstimator, TransformerMixin):
 
-    def __init__(self, tx_col_names, all_col_names, encoder_type):
+    def __init__(self, tx_col_names, all_col_names, encoder):
         self.tx_col_names = tx_col_names
         self.all_col_names = all_col_names
-        self.encoder_type = encoder_type
+        self.encoder = encoder
         self.encoders = []
 
     def transform(self, X):
@@ -43,12 +45,12 @@ class ColEncoder(object):
     def fit(self, X, y=None):
         self.binarizers = []
         for cn in self.tx_col_names:
-            encoder = self.encoder_type()
+            encoder = eval(self.encoder + '()')
             encoder.fit(X[:,cn == self.all_col_names].squeeze())
             self.encoders.append(encoder)
         return self
 
-class DirectColEncoder(object):
+class DirectColEncoder(BaseEstimator, TransformerMixin):
 
     def __init__(self, tx_col_names, all_col_names, encoder_mappings):
         self.tx_col_names = tx_col_names
@@ -74,12 +76,12 @@ if __name__=="__main__":
     col_bin = ColEncoder(
         tx_col_names=['Gender','Over18','OverTime'],
         all_col_names=features,
-        encoder_type=LabelBinarizer
+        encoder='LabelBinarizer'
     )
     col_enc = ColEncoder(
         tx_col_names=['Department','EducationField','JobRole','MaritalStatus'],
         all_col_names=features,
-        encoder_type=LabelEncoder
+        encoder='LabelEncoder'
     )
     col_direct = DirectColEncoder(
         tx_col_names=['BusinessTravel'],
@@ -88,24 +90,34 @@ if __name__=="__main__":
             [('Non-Travel',0), ('Travel_Rarely',1), ('Travel_Frequently',2)]
         ]
     )
-    one_hot_enc = OneHotEncoder(n_values='auto', categorical_features=gen_one_hot_feature_mask(features))
+    one_hot_enc = OneHotEncoder(n_values='auto', categorical_features=gen_one_hot_feature_ndx(features))
 
     # Build and execute pipeline
     pipe = Pipeline([
         ('binarize', col_bin), # Map select columns to binary 0 or 1
         ('str2int', col_enc), # Map select categorical columns to integers
         ('direct_encode', col_direct), # Map BusinessTravel categories to specific integers (enforce ranking)
-        ('onehot', one_hot_enc),
-        ('clf', RandomForestClassifier(n_estimators=100))
+        ('one_hot', one_hot_enc),
+        ('clf1', RandomForestClassifier())
     ])
-    pipe.fit(x,y)
-    y_pred = pipe.predict(x)
 
-    # Compute area under the ROC curve
-    auc = roc_auc_score(y_true=y, y_score=y_pred)
-    print('Area Under ROC: {}'.format(auc))
-
-    # Setup CV model selection search
-    # model_params = dict(
-    #     one_hot=[None, OneHotEncoder(n_values='auto', categorical_features=)]
-    # )
+    # Setup & run CV model selection search
+    default_max_feat = np.sqrt(len(features)) / len(features)
+    model_params = dict(
+        one_hot=[None, one_hot_enc],
+        clf1__n_estimators=[1, 5, 10, 20, 40, 80, 100, 200, 400, 800],
+        clf1__criterion=['gini','entropy'],
+        clf1__max_features=[default_max_feat, 0.2, 0.5, 0.8, 1.0],
+        clf1__max_depth=[1, 3, 5, 10, 20, 40, None]
+    )
+    random_search_cv = RandomizedSearchCV(
+        pipe,
+        param_distributions=model_params,
+        n_iter=50, # Number of parameter combinations to try
+        scoring=make_scorer(roc_auc_score),
+        cv=5, # Stratified K-fold cross validation
+        verbose=2,
+        n_jobs=4 # Number of jobs to run in parallel
+    )
+    random_search_cv.fit(x,y)
+    bp = 1
