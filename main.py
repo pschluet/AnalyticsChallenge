@@ -4,8 +4,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, LabelBinarizer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score, make_scorer
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
+import pprint
 
 def load_data():
     # Load training data
@@ -113,11 +114,13 @@ if __name__=="__main__":
     random_search_cv = RandomizedSearchCV(
         pipe,
         param_distributions=model_params,
-        n_iter=50, # Number of parameter combinations to try
+        n_iter=1, # Number of parameter combinations to try
         scoring=make_scorer(roc_auc_score),
         cv=5, # Stratified K-fold cross validation
         verbose=2,
         n_jobs=4 # Number of jobs to run in parallel
     )
     random_search_cv.fit(x,y)
-    bp = 1
+
+    print('\n\nBest Score: {}\nBest Parameters:'.format(random_search_cv.best_score_))
+    pprint.pprint(random_search_cv.best_params_)
