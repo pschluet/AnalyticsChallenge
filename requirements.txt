@@ -1,3 +1,4 @@
+# virtualenv setup using Python 3.6.2
 cycler==0.10.0
 matplotlib==2.0.2
 numpy==1.13.1
