@@ -37,14 +37,14 @@ class ColEncoder(object):
         x_out = X.copy()
         for ii, cn in enumerate(self.tx_col_names):
             msk = cn == self.all_col_names
-            x_out[:,msk] = self.encoders[ii].transform(x_out[:,msk]).reshape(-1,1)
+            x_out[:,msk] = self.encoders[ii].transform(x_out[:,msk].squeeze()).reshape(-1,1)
         return x_out
 
     def fit(self, X, y=None):
         self.binarizers = []
         for cn in self.tx_col_names:
             encoder = self.encoder_type()
-            encoder.fit(X[:,cn == self.all_col_names])
+            encoder.fit(X[:,cn == self.all_col_names].squeeze())
             self.encoders.append(encoder)
         return self
 
@@ -70,7 +70,6 @@ class DirectColEncoder(object):
 if __name__=="__main__":
     # Load data
     (x, y, x_test, features) = load_data()
-
 
     col_bin = ColEncoder(
         tx_col_names=['Gender','Over18','OverTime'],
