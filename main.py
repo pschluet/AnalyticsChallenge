@@ -111,10 +111,9 @@ if __name__=="__main__":
         clf1__max_features=[default_max_feat, 0.2, 0.5, 0.8, 1.0],
         clf1__max_depth=[1, 3, 5, 10, 20, 40, None]
     )
-    random_search_cv = RandomizedSearchCV(
+    random_search_cv = GridSearchCV(
         pipe,
-        param_distributions=model_params,
-        n_iter=1, # Number of parameter combinations to try
+        param_grid=model_params,
         scoring=make_scorer(roc_auc_score),
         cv=5, # Stratified K-fold cross validation
         verbose=2,
