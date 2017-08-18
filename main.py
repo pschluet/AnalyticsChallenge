@@ -3,7 +3,6 @@ import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, LabelBinarizer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_auc_score, make_scorer
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
 import pprint
@@ -114,9 +113,9 @@ if __name__=="__main__":
     random_search_cv = GridSearchCV(
         pipe,
         param_grid=model_params,
-        scoring=make_scorer(roc_auc_score),
+        scoring='roc_auc',
         cv=5, # Stratified K-fold cross validation
-        verbose=2,
+        verbose=3,
         n_jobs=4 # Number of jobs to run in parallel
     )
     random_search_cv.fit(x,y)
