@@ -105,10 +105,10 @@ if __name__=="__main__":
     default_max_feat = np.sqrt(len(features)) / len(features)
     model_params = dict(
         one_hot=[None, one_hot_enc],
-        clf1__n_estimators=[1, 5, 10, 20, 40, 80, 100, 200, 400, 800],
+        clf1__n_estimators=[1, 40, 100, 200, 400, 800, 1200],
         clf1__criterion=['gini','entropy'],
-        clf1__max_features=[default_max_feat, 0.2, 0.5, 0.8, 1.0],
-        clf1__max_depth=[1, 3, 5, 10, 20, 40, None]
+        clf1__max_features=[default_max_feat, 0.2, 0.5, 0.8],
+        clf1__max_depth=[10, 20, 40, None]
     )
     random_search_cv = GridSearchCV(
         pipe,
