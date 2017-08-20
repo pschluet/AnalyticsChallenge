@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
 import pprint
+from sklearn.externals import joblib
 
 def load_data():
     # Load training data
@@ -110,7 +111,7 @@ if __name__=="__main__":
         clf1__max_features=[default_max_feat, 0.2, 0.5, 0.8],
         clf1__max_depth=[10, 20, 40, None]
     )
-    random_search_cv = GridSearchCV(
+    search_cv = GridSearchCV(
         pipe,
         param_grid=model_params,
         scoring='roc_auc',
@@ -118,7 +119,20 @@ if __name__=="__main__":
         verbose=3,
         n_jobs=4 # Number of jobs to run in parallel
     )
-    random_search_cv.fit(x,y)
+    search_cv.fit(x,y)
 
-    print('\n\nBest Score: {}\nBest Parameters:'.format(random_search_cv.best_score_))
-    pprint.pprint(random_search_cv.best_params_)
+    print('\n\nBest Score: {}\nBest Parameters:'.format(search_cv.best_score_))
+    pprint.pprint(search_cv.best_params_)
+
+    # Save best classifier & CV results
+    joblib.dump(search_cv, 'CvResults.pkl')
+    # Load with search_cv = joblib.load('CvResults.pkl')
+
+    # Make prediction output
+    ypred_yes_msk = search_cv.best_estimator_.predict(x_test) == 1
+    ypred = np.array(['Yes' if x else 'No' for x in ypred_yes_msk])
+    emp_num = x_test[:,features == 'EmployeeNumber'].squeeze()
+    out_data = np.stack((emp_num, ypred), axis=1)
+    np.savetxt('Prediction.csv', out_data, fmt='%d,%s',
+             header='EmployeeNumber,Attrition',
+             comments='')
