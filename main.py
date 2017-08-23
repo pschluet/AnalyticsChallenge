@@ -7,6 +7,25 @@ from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
 import pprint
 from sklearn.externals import joblib
+from sklearn.metrics import confusion_matrix
+
+def single_point_roc_score(clf, X, y_true):
+    y_pred = clf.predict(X)
+
+    cm = confusion_matrix(y_true=y_true, y_pred=y_pred)
+
+    true_pos = cm[1,1]
+    false_pos = cm[0,1]
+
+    totals = np.sum(cm,axis=1)
+    num_neg = totals[0]
+    num_pos = totals[1]
+
+    true_pos_rate = true_pos / num_pos
+    false_pos_rate = false_pos / num_neg
+
+    score = (true_pos_rate + 1 - false_pos_rate) / 2.
+    return score
 
 def load_data():
     # Load training data
@@ -114,7 +133,7 @@ if __name__=="__main__":
     search_cv = GridSearchCV(
         pipe,
         param_grid=model_params,
-        scoring='roc_auc',
+        scoring=single_point_roc_score,
         cv=5, # Stratified K-fold cross validation
         verbose=3,
         n_jobs=4 # Number of jobs to run in parallel
